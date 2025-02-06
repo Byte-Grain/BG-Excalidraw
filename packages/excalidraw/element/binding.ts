@@ -19,7 +19,6 @@ import type { Bounds } from "./bounds";
 import { getCenterForBounds } from "./bounds";
 import type { AppState } from "../types";
 import { isPointOnShape } from "../../utils/collision";
-import { getElementAtPosition, getElementsAtPosition } from "../scene";
 import {
   isArrowElement,
   isBindableElement,
@@ -561,7 +560,7 @@ export const getHoveredElementForBinding = (
 ): NonDeleted<ExcalidrawBindableElement> | null => {
   if (considerAllElements) {
     let cullRest = false;
-    const candidateElements = getElementsAtPosition(
+    const candidateElements = getAllElementsAtPositionForBinding(
       elements,
       (element) =>
         isBindableElement(element, false) &&
@@ -615,7 +614,7 @@ export const getHoveredElementForBinding = (
       .pop() as NonDeleted<ExcalidrawBindableElement>;
   }
 
-  const hoveredElement = getElementAtPosition(
+  const hoveredElement = getElementAtPositionForBinding(
     elements,
     (element) =>
       isBindableElement(element, false) &&
@@ -632,6 +631,50 @@ export const getHoveredElementForBinding = (
   );
 
   return hoveredElement as NonDeleted<ExcalidrawBindableElement> | null;
+};
+
+const getElementAtPositionForBinding = (
+  elements: readonly NonDeletedExcalidrawElement[],
+  isAtPositionFn: (element: NonDeletedExcalidrawElement) => boolean,
+) => {
+  let hitElement = null;
+  // We need to to hit testing from front (end of the array) to back (beginning of the array)
+  // because array is ordered from lower z-index to highest and we want element z-index
+  // with higher z-index
+  for (let index = elements.length - 1; index >= 0; --index) {
+    const element = elements[index];
+    if (element.isDeleted) {
+      continue;
+    }
+    if (isAtPositionFn(element)) {
+      hitElement = element;
+      break;
+    }
+  }
+
+  return hitElement;
+};
+
+const getAllElementsAtPositionForBinding = (
+  elements: readonly NonDeletedExcalidrawElement[],
+  isAtPositionFn: (element: NonDeletedExcalidrawElement) => boolean,
+) => {
+  const elementsAtPosition: NonDeletedExcalidrawElement[] = [];
+  // We need to to hit testing from front (end of the array) to back (beginning of the array)
+  // because array is ordered from lower z-index to highest and we want element z-index
+  // with higher z-index
+  for (let index = elements.length - 1; index >= 0; --index) {
+    const element = elements[index];
+    if (element.isDeleted) {
+      continue;
+    }
+
+    if (isAtPositionFn(element)) {
+      elementsAtPosition.push(element);
+    }
+  }
+
+  return elementsAtPosition;
 };
 
 const calculateFocusAndGap = (
